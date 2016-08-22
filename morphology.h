@@ -1,3 +1,7 @@
+/*
+形态学操作
+@author NvRom
+*/
 #include<opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -6,6 +10,7 @@
 enum morShape{
 	MOR_RECT , MOR_CROSS , MOR_ELLOPSE
 };
+
 //形态学基本操作
 enum  morOp{
 	EROSION , DILATION
@@ -28,14 +33,6 @@ cv::Mat getSE(int shape , cv::Size size , cv::Point anchor = cv::Point(-1,-1));
 cv::Point getNormalAnchor(cv::Size size , cv::Point anchor);
 
 /*
-图像的腐蚀操作
-@param src：输入图像，要求是灰度图
-@param dst：输出图像，大小和类型与src一样
-@param kernel：结构体（SE），可以通过getSE函数得到，提供以下几种kernel，分别为：MOR_RECT , MOR_CROSS , MOR_ELLOPSE
-@param anchor：结构体的原点，默认anchor为（-1，-1）表示原点位于结构体的中心位置
-*/
-void erosion(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor = cv::Point(-1,-1));
-/*
 判断结构体与原图像上是否匹配，匹配返回true，否则返回false
 @param src：输入图像，二值化的图像
 @param op：操作类型，有腐蚀（erosion）和膨胀（dilation）两种基本操作
@@ -44,3 +41,34 @@ void erosion(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor = cv
 @param anchor：结构体的原点，默认anchor为（-1，-1）表示原点位于结构体的中心位置
 */
 bool SEMatchSrc(cv::Mat src , int op , int rowIndex , int colIndex , cv::Mat kernel , cv::Point anchor);
+
+/*
+图像的腐蚀操作
+@param src：输入图像，要求是灰度图
+@param dst：输出图像，大小和类型与src一样
+@param kernel：结构体（SE），可以通过getSE函数得到，提供以下几种kernel，分别为：MOR_RECT , MOR_CROSS , MOR_ELLOPSE
+@param anchor：结构体的原点，默认anchor为（-1，-1）表示原点位于结构体的中心位置
+*/
+void erosion(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor = cv::Point(-1,-1));
+
+/*
+图像的膨胀操作
+@param src：输入图像，要求是灰度图
+@param dst：输出图像，大小和类型与src一样
+@param kernel：结构体（SE），可以通过getSE函数得到，提供以下几种kernel，分别为：MOR_RECT , MOR_CROSS , MOR_ELLOPSE
+@param anchor：结构体的原点，默认anchor为（-1，-1）表示原点位于结构体的中心位置
+*/
+void dilation(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor = cv::Point(-1,-1));
+/*
+图像开操作,先对图像进行腐蚀，然后再膨胀
+@param src：输入图像，要求是灰度图
+@param dst：输出图像，大小和类型与src一样
+@param kernel：结构体（SE），可以通过getSE函数得到，提供以下几种kernel，分别为：MOR_RECT , MOR_CROSS , MOR_ELLOPSE
+@param anchor：结构体的原点，默认anchor为（-1，-1）表示原点位于结构体的中心位置
+*/
+void opening(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor = cv::Point(-1,-1));
+
+/*
+图像关闭操作，先对图像进行膨胀，然后再腐蚀
+*/
+void closing(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor = cv::Point(-1,-1));

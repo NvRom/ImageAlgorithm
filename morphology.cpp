@@ -1,3 +1,7 @@
+/*
+形态学操作
+@author NvRom
+*/
 #include "morphology.h"
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -18,8 +22,8 @@ bool SEMatchSrc(cv::Mat src , int op , int rowIndex , int colIndex , cv::Mat ker
 	if (op == EROSION){
 		for (int i = 0 ; i < kernel.rows ; i ++){
 			for (int j = 0 ; j < kernel.cols ; j ++){
-				if((kernel.at<uchar>(i , j) == 0 && src.at<uchar>(rowIndex + i - anchor.x , colIndex + j - anchor.y) == 0)
-					|| (kernel.at<uchar>(i , j) == 1 && src.at<uchar>(rowIndex + i - anchor.x , colIndex + j - anchor.y) == 255)){
+				if((kernel.at<uchar>(i , j) == 1 && src.at<uchar>(rowIndex + i - anchor.x , colIndex + j - anchor.y) == 255)
+					|| kernel.at<uchar>(i , j) == 0){
 						continue;
 				}else
 					return false;
@@ -28,6 +32,15 @@ bool SEMatchSrc(cv::Mat src , int op , int rowIndex , int colIndex , cv::Mat ker
 		return true;
 	}
 	if (op == DILATION){
+		for (int i = 0 ; i < kernel.rows ; i ++){
+			for (int j = 0 ; j < kernel.cols ; j ++){
+				if((kernel.at<uchar>(i , j) == 0) || (rowIndex + i - anchor.x  < 0) || (colIndex + j - anchor.y < 0 ))
+					continue;
+				else if ((kernel.at<uchar>(i , j) == 1 && src.at<uchar>(rowIndex + i - anchor.x , colIndex + j - anchor.y) == 255)){
+					return true;
+				}
+			}
+		}
 		return false;
 	}
 }
@@ -107,11 +120,48 @@ void erosion(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor){
 	for (int i = 0 ; i < src.rows ; i ++){
 		for (int j = 0 ; j < src.cols ;j ++){
 			if (i < topMargin || i >= src.rows - downMargin){
-				dst.at<uchar>(i,j) = 0;
+				dst.at<uchar>(i,j) = src.at<uchar>(i,j);
 			}else if (j < leftMargin || j >= src.cols - rightMargin){
-				dst.at<uchar>(i,j) = 0;
+				dst.at<uchar>(i,j) = src.at<uchar>(i,j);
 			}
 		}
 	}
 
+}
+
+void dilation(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor){
+	CV_Assert(src.size() == dst.size());
+	if (kernel.empty()){
+		kernel = getSE(MOR_RECT , cv::Size(3,3) , anchor);
+	}
+	cv::Size size = kernel.size();
+	if (anchor == cv::Point(-1,-1)){
+		anchor = getNormalAnchor(size ,anchor);
+	}
+	//膨胀操作，图像结果会扩张.margin的大小刚好跟erosion相反
+	int downMargin = anchor.y;
+	int topMargin = size.height - anchor.y - 1;
+	int rightMargin = anchor.x;
+	int leftMargin = size.width - anchor.x - 1;
+	for (int i = 0 ; i < src.rows ; i ++){
+		for (int j = 0 ; j < src.cols ; j ++){
+			if (SEMatchSrc(src , DILATION , i , j , kernel , anchor)){
+				dst.at<uchar>(i,j) = 255;//匹配上，置255（白色）
+			}else{
+				dst.at<uchar>(i,j) = 0;//未匹配上，置0（黑色）
+			}
+		}
+	}
+}
+
+void opening(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor){
+	erosion(src,dst,kernel,anchor);
+	cv::Mat temp = dst.clone();
+	dilation(temp,dst,kernel,anchor);
+}
+
+void closing(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor){
+	dilation(src,dst,kernel,anchor);
+	cv::Mat temp = dst.clone();
+	erosion(temp,dst,kernel,anchor);
 }
