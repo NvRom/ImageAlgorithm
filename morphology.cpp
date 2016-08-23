@@ -137,6 +137,14 @@ void dilation(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor){
 	cv::Size size = kernel.size();
 	if (anchor == cv::Point(-1,-1)){
 		anchor = getNormalAnchor(size ,anchor);
+	} 
+	//膨胀操作，需对se进行反转
+	cv::Mat _kernel = kernel.clone();
+	for (int i = 0 ; i < kernel.cols ; i ++){
+		for (int j = 0 ; j < kernel.rows ; j ++){
+			CV_Assert(cv::Point(2*anchor.x - i ,2*anchor.y - j).inside(cv::Rect(0,0,kernel.cols,kernel.rows)));
+			_kernel.at<uchar>(i , j) = kernel.at<uchar>(2*anchor.x - i ,2*anchor.y - j);
+		}
 	}
 	//膨胀操作，图像结果会扩张.margin的大小刚好跟erosion相反
 	int downMargin = anchor.y;
@@ -145,7 +153,7 @@ void dilation(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor){
 	int leftMargin = size.width - anchor.x - 1;
 	for (int i = 0 ; i < src.rows ; i ++){
 		for (int j = 0 ; j < src.cols ; j ++){
-			if (SEMatchSrc(src , DILATION , i , j , kernel , anchor)){
+			if (SEMatchSrc(src , DILATION , i , j , _kernel , anchor)){
 				dst.at<uchar>(i,j) = 255;//匹配上，置255（白色）
 			}else{
 				dst.at<uchar>(i,j) = 0;//未匹配上，置0（黑色）
