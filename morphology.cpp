@@ -34,7 +34,8 @@ bool SEMatchSrc(cv::Mat src , int op , int rowIndex , int colIndex , cv::Mat ker
 	if (op == DILATION){
 		for (int i = 0 ; i < kernel.rows ; i ++){
 			for (int j = 0 ; j < kernel.cols ; j ++){
-				if((kernel.at<uchar>(i , j) == 0) || (rowIndex + i - anchor.x  < 0) || (colIndex + j - anchor.y < 0 ))
+				if((kernel.at<uchar>(i , j) == 0) || (rowIndex + i - anchor.x  < 0) || (colIndex + j - anchor.y < 0 )
+					 || (rowIndex + i - anchor.x  >= src.rows) || (colIndex + j - anchor.y  >= src.cols ))
 					continue;
 				else if ((kernel.at<uchar>(i , j) == 1 && src.at<uchar>(rowIndex + i - anchor.x , colIndex + j - anchor.y) == 255)){
 					return true;
@@ -94,6 +95,7 @@ cv::Mat getSE(int shape , cv::Size size , cv::Point anchor){
 
 void erosion(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor){
 	CV_Assert(src.size() == dst.size());
+	cv::Mat _dst(src.size() , CV_8U);
 	if (kernel.empty()){
 		kernel = getSE(MOR_RECT , cv::Size(3,3) , anchor);
 	}
@@ -110,9 +112,9 @@ void erosion(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor){
 	for (int i = topMargin ; i < src.rows - downMargin ; i ++){
 		for (int j = leftMargin ; j < src.cols - rightMargin ; j ++){
 			if (SEMatchSrc(src , EROSION , i , j , kernel , anchor)){
-				dst.at<uchar>(i,j) = 255;//匹配上，置255（白色）
+				_dst.at<uchar>(i,j) = 255;//匹配上，置255（白色）
 			}else{
-				dst.at<uchar>(i,j) = 0;//未匹配上，置0（黑色）
+				_dst.at<uchar>(i,j) = 0;//未匹配上，置0（黑色）
 			}
 		}
 	}
@@ -120,17 +122,18 @@ void erosion(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor){
 	for (int i = 0 ; i < src.rows ; i ++){
 		for (int j = 0 ; j < src.cols ;j ++){
 			if (i < topMargin || i >= src.rows - downMargin){
-				dst.at<uchar>(i,j) = src.at<uchar>(i,j);
+				_dst.at<uchar>(i,j) = src.at<uchar>(i,j);
 			}else if (j < leftMargin || j >= src.cols - rightMargin){
-				dst.at<uchar>(i,j) = src.at<uchar>(i,j);
+				_dst.at<uchar>(i,j) = src.at<uchar>(i,j);
 			}
 		}
 	}
-
+	dst = _dst.clone();
 }
 
 void dilation(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor){
 	CV_Assert(src.size() == dst.size());
+	cv::Mat _dst(src.size() , CV_8U);
 	if (kernel.empty()){
 		kernel = getSE(MOR_RECT , cv::Size(3,3) , anchor);
 	}
@@ -154,12 +157,13 @@ void dilation(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor){
 	for (int i = 0 ; i < src.rows ; i ++){
 		for (int j = 0 ; j < src.cols ; j ++){
 			if (SEMatchSrc(src , DILATION , i , j , _kernel , anchor)){
-				dst.at<uchar>(i,j) = 255;//匹配上，置255（白色）
+				_dst.at<uchar>(i,j) = 255;//匹配上，置255（白色）
 			}else{
-				dst.at<uchar>(i,j) = 0;//未匹配上，置0（黑色）
+				_dst.at<uchar>(i,j) = 0;//未匹配上，置0（黑色）
 			}
 		}
 	}
+	dst = _dst.clone();
 }
 
 void opening(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor){
@@ -172,4 +176,43 @@ void closing(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor){
 	dilation(src,dst,kernel,anchor);
 	cv::Mat temp = dst.clone();
 	erosion(temp,dst,kernel,anchor);
+}
+
+void logicAnd(cv::Mat &src , cv::Mat mask){
+	CV_Assert(src.rows == mask.rows && src.cols == mask.cols);
+	for (int i = 0 ; i < src.rows ;  i ++){
+		uchar *ptrSrc = src.ptr(i);
+		uchar *ptrMask = mask.ptr(i);
+		for (int j = 0 ; j < src.cols ; j ++){
+			if (ptrSrc[j] == 255){
+				ptrSrc[j] = (ptrSrc[j] & ptrMask[j]);
+			}
+		}
+	}
+}
+
+bool matchMask(cv::Mat img , cv::Mat mask){
+	CV_Assert(img.rows == mask.rows && img.cols == mask.cols);
+	for (int i = 0 ; i < img.rows ;  i ++){
+		uchar *ptrSrc = img.ptr(i);
+		uchar *ptrMask = mask.ptr(i);
+		for (int j = 0 ; j < img.cols ; j ++){
+			if (ptrSrc[j] != ptrMask[j]){
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+cv::Mat geodesticDilation(cv::Mat mask , cv::Mat marker , cv::Mat kernel , cv::Point anchor){
+	CV_Assert(marker.rows == mask.rows && marker.cols == mask.cols);
+	cv::Mat openImg1(marker.size(),CV_8U);
+	//openImg1表示（i-1），openImg0表示(i)
+	do {
+		openImg1 = marker.clone();
+		dilation(openImg1 , marker , kernel , anchor);
+		logicAnd(marker , mask);
+	} while (!matchMask(marker , openImg1));
+	return marker;
 }

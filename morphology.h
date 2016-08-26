@@ -22,7 +22,7 @@ enum  morOp{
 @param size:结构体的大小，若没指定大小，默认为3*3
 @param anchor:结构体的原点位置，默认anchor为(-1,-1),表示结构体的中心
 */
-cv::Mat getSE(int shape , cv::Size size , cv::Point anchor = cv::Point(-1,-1));
+cv::Mat getSE(int shape , cv::Size size = cv::Size(3,3) , cv::Point anchor = cv::Point(-1,-1));
 
 /*
 若结构体原点是默认，则返回中心点
@@ -59,6 +59,7 @@ void erosion(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor = cv
 @param anchor：结构体的原点，默认anchor为（-1，-1）表示原点位于结构体的中心位置
 */
 void dilation(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor = cv::Point(-1,-1));
+
 /*
 图像开操作,先对图像进行腐蚀，然后再膨胀
 @param src：输入图像，要求是灰度图
@@ -70,5 +71,29 @@ void opening(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor = cv
 
 /*
 图像关闭操作，先对图像进行膨胀，然后再腐蚀
+参数同上
 */
 void closing(cv::Mat src , cv::Mat &dst , cv::Mat kernel , cv::Point anchor = cv::Point(-1,-1));
+
+/*
+逻辑与操作，求src与mask公共交集的部分，并返回src
+@param src 输入图像
+@param mask 模板，src以mask为目标进行恢复
+*/
+void logicAnd(cv::Mat &src , cv::Mat mask);
+
+/*
+判断两幅图像是否完全吻合
+@param img 原图像，待比较的图像
+@param mask 目标图像
+*/
+bool matchMask(cv::Mat img , cv::Mat mask);
+
+/*
+利用dilation操作对图像恢
+@param mask：输入图像，要求是灰度图,同时限制marker无限膨胀，恢复成与mask局部一样的图像
+@param marker：待恢复的图像，从mask做opening得到
+@param kernel：结构体（SE），可以通过getSE函数得到，提供以下几种kernel，分别为：MOR_RECT , MOR_CROSS , MOR_ELLOPSE
+@param anchor：结构体的原点，默认anchor为（-1，-1）表示原点位于结构体的中心位置
+*/
+cv::Mat geodesticDilation(cv::Mat mask , cv::Mat marker , cv::Mat kernel , cv::Point anchor = cv::Point(-1,-1));
